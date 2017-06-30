@@ -12,7 +12,7 @@ class AEGenerator(nn.Module):
 
 		# hidden + noise -> image
 		self.main = nn.Sequential(
-			nn.Linear(nz, ngf),
+			nn.Linear(nz+hidden, ngf),
 			nn.ReLU(True),
 			nn.Linear(ngf, ngf),
 			nn.ReLU(True),
