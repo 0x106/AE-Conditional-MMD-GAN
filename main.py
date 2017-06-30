@@ -98,7 +98,7 @@ class MNISTDataGenerator():
 
 		self.N = len(self.trData)
 
-		self.labels = [ [] for i in range(10) ]
+		self.labels = [ [] for i in range(self.num_local_classes) ]
 		for i in range(self.N):
 			self.labels[self.trData[i][1]].append(i)
 
@@ -125,8 +125,7 @@ class MNISTDataGenerator():
 			self.sample, _ = self.train_iter.next()
 
 		# a point is a random image from a random class
-
-		random_labels = np.random.permutation(10)
+		random_labels = np.random.permutation(self.num_local_classes)
 
 		for i in range(self.num_local_classes):
 			label = random_labels[i]#np.random.randint(10)
@@ -147,81 +146,6 @@ class MNISTDataGenerator():
 			self.point = self.point.cuda()
 
 		return self.sample, self.local, self.point
-=======
-    def __init__(self, opt):
-
-        self.B = opt.batchSize
-        self.cuda = opt.cuda
-        self.num_local_classes = 10
-        self.C = self.B // self.num_local_classes
-
-        data_path = '../data/mnist'
-        if self.cuda:
-            data_path = '/input'
-
-        self.trData = dset.MNIST(data_path, train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ]))
-
-        self.testData = dset.MNIST(data_path, train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ]))
-
-        self.N = len(self.trData)
-
-        self.labels = [ [] for i in range(10) ]
-        for i in range(self.N):
-            self.labels[self.trData[i][1]].append(i)
-
-        self.sample = torch.FloatTensor(self.B, 1, opt.size, opt.size)
-        self.local = torch.FloatTensor(self.B, 1, opt.size, opt.size)
-        self.point = torch.FloatTensor(self.B, 1, opt.size, opt.size)
-
-        self.train_loader = torch.utils.data.DataLoader(self.trData, batch_size=self.B, shuffle=True)
-        self.test_loader = torch.utils.data.DataLoader(self.testData, batch_size=self.B, shuffle=True)
-
-        self.train_iter = iter(self.train_loader)
-
-    def next(self):
-        if self.cuda:
-            self.sample = self.sample.cpu()
-            self.local = self.local.cpu()
-            self.point = self.point.cpu()
-
-        # sample comes from the train_loader
-        try:
-            self.sample, _ = self.train_iter.next()
-        except:
-            self.train_iter = iter(self.train_loader)
-            self.sample, _ = self.train_iter.next()
-
-        # a point is a random image from a random class
-
-		random_labels = np.random.permutation(10)
-
-        for i in range(self.num_local_classes):
-            label = random_labels[i]#np.random.randint(10)
-            class_size = len(self.labels[label])
-            image = np.random.randint(class_size)
-
-            self.point[i*self.C].copy_(self.trData[ self.labels[label][image] ][0])
-            self.point[i*self.C:(i+1)*self.C] = self.point[i*self.C].unsqueeze(0).expand_as(self.point[i*self.C:(i+1)*self.C])
-
-            # local is a random selection from the same class as point
-            subset = torch.randperm(class_size)[:self.C]
-            for k in range(self.C):
-                self.local[(i*self.C) + k].copy_( self.trData[ self.labels[label][subset[k]] ][0] )
-
-        if self.cuda:
-            self.sample = self.sample.cuda()
-            self.local = self.local.cuda()
-            self.point = self.point.cuda()
-
-        return self.sample, self.local, self.point
->>>>>>> 549a3107f0d167f1857829ac978903c80b3c593f
 
 # trData = dset.MNIST(opt.dataroot, train=True, download=True,
 # 			   transform=transforms.Compose([
@@ -339,32 +263,32 @@ for epoch in range(opt.niter):
 				p.data.clamp_(opt.clamp_lower, opt.clamp_upper)
 
 			# data = data_iter.next()
-			data, local, point = data_loader.next()
+			sample, local, point = data_loader.next()
 			i += 1
 
 			# train with real
-			real_cpu, _ = data
+			# real_cpu, _ = data
 			netD.zero_grad()
 			batch_size = real_cpu.size(0)
 
-			if opt.cuda:
-				real_cpu = real_cpu.cuda()
-			input.resize_as_(real_cpu).copy_(real_cpu)
+			# if opt.cuda:
+				# real_cpu = real_cpu.cuda()
+			input.resize_as_(sample).copy_(sample)
 			inputv = Variable(input)
 
 			errD_real = netD(inputv)
 			errD_real.backward(one)
 
 			# train with fake
-			try:
-				gen_data = gen_data_iter.next()
-			except:
-				gen_data_iter = iter(gen_dataloader)
-				gen_data = gen_data_iter.next()
-			real_cpu, _ = gen_data
-			if opt.cuda:
-				real_cpu = real_cpu.cuda()
-			input.resize_as_(real_cpu).copy_(real_cpu)
+			# try:
+				# gen_data = gen_data_iter.next()
+			# except:
+				# gen_data_iter = iter(gen_dataloader)
+				# gen_data = gen_data_iter.next()
+			# real_cpu, _ = gen_data
+			# if opt.cuda:
+				# real_cpu = real_cpu.cuda()
+			# input.resize_as_(real_cpu).copy_(real_cpu)
 			inputv = Variable(input)
 			noise.resize_(input.size(0), nz, 1, 1).normal_(0, 1)
 			noisev = Variable(noise, volatile = True) # totally freeze netG
